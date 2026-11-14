@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MobiFrota - Gestão de Frota</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body id="app-body" class="bg-slate-900 text-slate-100 flex flex-col md:flex-row h-screen overflow-hidden transition-colors duration-300">
+
+    <!-- OVERLAY MOBILE -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/60 z-30 hidden md:hidden"></div>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 w-64 bg-slate-950 border-r border-slate-800 flex flex-col z-40 transform -translate-x-full md:translate-x-0 transition-transform duration-300">
+        <div class="p-6 flex items-center justify-between border-b border-slate-800" id="sidebar-header">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-slate-950 font-bold text-xl shadow-lg shadow-emerald-500/20">
+                    <i class="fa-solid fa-car-side"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-tight text-white" id="logo-title">MobiFrota</h1>
+                    <p class="text-xs text-emerald-500 font-semibold">Gestão Inteligente</p>
+                </div>
+            </div>
+            <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-white text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <nav class="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto" id="sidebar-nav">
+            <a href="#executivo" onclick="switchTab('executivo', event)" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/30">
+                <i class="fa-solid fa-chart-pie w-5 text-center"></i> Executivo
+            </a>
+            <a href="#lancamentos" onclick="switchTab('lancamentos', event)" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/50 hover:text-slate-200">
+                <i class="fa-solid fa-file-circle-plus w-5 text-center text-emerald-500"></i> Lançar Dados
+            </a>
+            <a href="#painel" onclick="switchTab('painel', event)" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/50 hover:text-slate-200">
+                <i class="fa-solid fa-gauge w-5 text-center"></i> Painel Geral
+            </a>
+            <a href="#quilometragem" onclick="switchTab('quilometragem', event)" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/50 hover:text-slate-200">
+                <i class="fa-solid fa-road w-5 text-center"></i> Quilometragem
+            </a>
+            <a href="#financeiro" onclick="switchTab('financeiro', event)" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/50 hover:text-slate-200">
+                <i class="fa-solid fa-wallet w-5 text-center"></i> Financeiro
+            </a>
+            <a href="#manutencao" onclick="switchTab('manutencao', event)" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/50 hover:text-slate-200">
+                <i class="fa-solid fa-wrench w-5 text-center"></i> Manutenção
+            </a>
+            <a href="#veiculos" onclick="switchTab('veiculos', event)" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/50 hover:text-slate-200">
+                <i class="fa-solid fa-car w-5 text-center"></i> Veículos
+            </a>
+            <a href="#motoristas" onclick="switchTab('motoristas', event)" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/50 hover:text-slate-200">
+                <i class="fa-solid fa-users w-5 text-center"></i> Motoristas
+            </a>
+        </nav>
+
+        <!-- BOTÕES DE TEMA, BACKUP E SINCRONIZAÇÃO -->
+        <div class="p-4 border-t border-slate-800 space-y-2" id="sidebar-footer">
+            <button onclick="toggleTheme()" class="w-full bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 py-2.5 px-4 rounded-xl text-sm font-medium flex items-center justify-center gap-2 shadow transition" id="theme-btn">
+                <i id="theme-icon" class="fa-solid fa-moon text-amber-400"></i> <span id="theme-text">Modo Claro</span>
+            </button>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="exportarBackup()" class="bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 py-2 px-2 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 shadow transition" id="backup-exp-btn" title="Baixar cópia de segurança">
+                    <i class="fa-solid fa-download text-cyan-400"></i> Backup
+                </button>
+                <button onclick="document.getElementById('input-importar-backup').click()" class="bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 py-2 px-2 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 shadow transition" id="backup-imp-btn" title="Restaurar cópia de segurança">
+                    <i class="fa-solid fa-upload text-amber-400"></i> Restaurar
+                </button>
+                <input type="file" id="input-importar-backup" accept=".json" class="hidden" onchange="importarBackup(event)">
+            </div>
+            <button onclick="triggerSync()" class="w-full bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 py-2.5 px-4 rounded-xl text-sm font-medium flex items-center justify-center gap-2 shadow transition" id="sync-btn">
+                <i class="fa-solid fa-rotate text-emerald-400" id="sync-icon"></i> Sincronizar
+            </button>
+        </div>
+    </aside>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="flex-1 flex flex-col overflow-hidden w-full">
+        <!-- HEADER -->
+        <header id="app-header" class="h-16 bg-slate-950 border-b border-slate-800 px-4 md:px-8 flex items-center justify-between z-10 shrink-0">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleSidebar()" class="md:hidden text-slate-300 hover:text-white text-xl p-2">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <h2 id="page-title" class="text-base md:text-lg font-bold text-white tracking-wide">Dashboard Executivo</h2>
+            </div>
+            <div class="flex items-center gap-4">
+                <div id="header-datetime" class="text-right leading-tight">
+                    <div id="header-date-text" class="lbl-titulo text-xs text-slate-400 font-normal">--</div>
+                    <div id="header-time-text" class="lbl-valor text-sm md:text-base font-bold text-white tracking-tight">--:--:--</div>
+                </div>
+                <span id="status-conexao" class="hidden sm:flex text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 px-3 py-1.5 rounded-full font-semibold items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Planilha Conectada
+                </span>
+                <div class="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-sm">
+                    WM
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTAINER DAS SEÇÕES -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 bg-slate-900 transition-colors duration-300" id="main-content">
+            
+            <!-- EXECUTIVO -->
+            <section id="tab-executivo" class="space-y-6">
+                <div id="alertas-executivo" class="space-y-2 hidden"></div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="card-tema bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-sm">
+                        <p class="lbl-titulo text-xs font-semibold text-slate-400 uppercase">Receita Total</p>
+                        <h3 id="kpi-receita" class="lbl-valor text-xl md:text-2xl font-bold text-white mt-1">R$ 0,00</h3>
+                    </div>
+                    <div class="card-tema bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-sm">
+                        <p class="lbl-titulo text-xs font-semibold text-slate-400 uppercase">Despesas Totais</p>
+                        <h3 id="kpi-despesa" class="lbl-valor text-xl md:text-2xl font-bold text-white mt-1">R$ 0,00</h3>
+                    </div>
+                    <div class="card-tema bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-sm">
+                        <p class="lbl-titulo text-xs font-semibold text-slate-400 uppercase">Lucro Líquido</p>
+                        <h3 id="kpi-lucro" class="text-xl md:text-2xl font-bold text-emerald-500 mt-1">R$ 0,00</h3>
+                    </div>
+                    <div class="card-tema bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-sm">
+                        <p class="lbl-titulo text-xs font-semibold text-slate-400 uppercase">KM Total Rodados</p>
+                        <h3 id="kpi-km" class="lbl-valor text-xl md:text-2xl font-bold text-white mt-1">0 km</h3>
+                    </div>
+                </div>
+
+                <div class="card-tema bg-slate-950 border border-slate-800 p-6 rounded-2xl shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="lbl-valor font-bold text-white text-base md:text-lg">Desempenho por Veículo (Receita por KM)</h3>
+                            <p class="lbl-titulo text-xs text-slate-400 mt-0.5">Valores atualizados automaticamente.</p>
+                        </div>
+                        <span class="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 px-3 py-1.5 rounded-full font-semibold">
+                            <i class="fa-solid fa-chart-column mr-1"></i> R$ / km
+                        </span>
+                    </div>
+                    <div class="h-80 w-full">
+                        <canvas id="graficoReceitaPorKm"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- LANÇAR DADOS -->
+            <section id="tab-lancamentos" class="space-y-6 hidden">
+                <div class="card-tema bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-sm space-y-6">
+                    <div class="flex items-center justify-between">
+                        <h3 id="titulo-form-lancamento" class="lbl-valor font-bold text-white text-lg">Lançamentos Diários</h3>
+                        <button type="button" id="btn-toggle-lancamento" onclick="toggleCadastro('lancamento')" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm transition shadow inline-flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> <span id="lbl-toggle-lancamento">Novo Lançamento</span>
+                        </button>
+                    </div>
+                    <div id="box-form-lancamento" class="hidden pt-2 border-t border-slate-800/70">
+                        <form id="form-lancamento" onsubmit="adicionarLancamento(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <input type="hidden" id="l-edit-index" value="">
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Data</label>
+                                <input type="date" id="l-data" required class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Veículo / Placa</label>
+                                <select id="l-veiculo" onchange="atualizarKmInicial()" class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200"></select>
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Motorista</label>
+                                <select id="l-motorista" class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200"></select>
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">KM Inicial</label>
+                                <input type="number" id="l-km-inicial" readonly class="input-tema w-full bg-slate-900/50 border border-slate-800 text-sm rounded-xl px-4 py-2.5 text-slate-400">
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">KM Final</label>
+                                <input type="number" id="l-km-final" placeholder="Ex: 46500" required oninput="calcularKmRodados()" class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Total KM</label>
+                                <input type="text" id="l-km-total" readonly class="w-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 font-bold text-sm rounded-xl px-4 py-2.5">
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Tipo de Combustível</label>
+                                <select id="l-tipo-combustivel" class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                                    <option value="GNV">GNV</option>
+                                    <option value="Gasolina">Gasolina</option>
+                                    <option value="Álcool">Álcool</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Combustível (R$)</label>
+                                <input type="number" step="0.01" min="0" id="l-combustivel" placeholder="0.00" required class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Receita (R$)</label>
+                                <input type="number" step="0.01" min="0" id="l-receita" placeholder="0.00" required class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Outras Despesas (R$)</label>
+                                <input type="number" step="0.01" min="0" id="l-despesa" placeholder="0.00" required class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div class="sm:col-span-2 lg:col-span-3 flex justify-end mt-2">
+                                <button type="submit" id="btn-salvar-lancamento" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-6 py-3 rounded-xl text-sm transition shadow">Salvar Lançamento</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- TABELA DE HISTÓRICO DE LANÇAMENTOS -->
+                <div class="card-tema bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-sm">
+                    <h3 class="lbl-valor font-bold text-white text-base mb-4">Histórico de Lançamentos</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-300 min-w-[820px]">
+                            <thead class="bg-slate-900 text-xs uppercase text-slate-400 table-header-tema">
+                                <tr>
+                                    <th class="p-3">Data</th>
+                                    <th class="p-3">Motorista</th>
+                                    <th class="p-3">Veículo</th>
+                                    <th class="p-3">Total KM</th>
+                                    <th class="p-3">Combustível</th>
+                                    <th class="p-3">Custo / KM</th>
+                                    <th class="p-3">Receita / KM</th>
+                                    <th class="p-3 text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-historico" class="divide-y divide-slate-800/60"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PAINEL GERAL -->
+            <section id="tab-painel" class="space-y-6 hidden">
+                <div class="card-tema bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-sm">
+                    <h3 class="lbl-valor font-bold text-white text-base mb-4">Desempenho Consolidado da Frota</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-300 min-w-[600px]">
+                            <thead class="bg-slate-900 text-xs uppercase text-slate-400 table-header-tema">
+                                <tr>
+                                    <th class="p-3">Veículo</th>
+                                    <th class="p-3">KM Total</th>
+                                    <th class="p-3">Receita Total</th>
+                                    <th class="p-3">Despesa Total</th>
+                                    <th class="p-3">Lucro Líquido</th>
+                                    <th class="p-3">Custo Médio R$ / KM</th>
+                                    <th class="p-3">Receita Média R$ / KM</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-consolidada" class="divide-y divide-slate-800/60"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card-tema bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-sm">
+                    <h3 class="lbl-valor font-bold text-white text-base mb-4">Desempenho por Motorista</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-300 min-w-[600px]">
+                            <thead class="bg-slate-900 text-xs uppercase text-slate-400 table-header-tema">
+                                <tr>
+                                    <th class="p-3">Motorista</th>
+                                    <th class="p-3">KM Total</th>
+                                    <th class="p-3">Receita Gerada</th>
+                                    <th class="p-3">Combustível</th>
+                                    <th class="p-3">Meta</th>
+                                    <th class="p-3">Status Meta</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-desempenho-motoristas" class="divide-y divide-slate-800/60"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- QUILOMETRAGEM -->
+            <section id="tab-quilometragem" class="space-y-6 hidden">
+                <div class="card-tema bg-slate-950 border border-slate-800 p-6 rounded-2xl shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="lbl-valor font-bold text-white text-base md:text-lg">Quilometragem Total por Veículo</h3>
+                            <p class="lbl-titulo text-xs text-slate-400 mt-0.5">Soma de todos os quilômetros rodados em cada veículo.</p>
+                        </div>
+                        <span class="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 px-3 py-1.5 rounded-full font-semibold">
+                            <i class="fa-solid fa-road mr-1"></i> KM Rodados
+                        </span>
+                    </div>
+                    <div class="h-80 w-full">
+                        <canvas id="graficoKmVeiculo"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- FINANCEIRO -->
+            <section id="tab-financeiro" class="space-y-6 hidden">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="card-tema bg-slate-950 border border-slate-800 p-5 rounded-2xl">
+                        <p class="lbl-titulo text-xs font-semibold text-slate-400 uppercase">Total de Entradas (Receitas)</p>
+                        <h3 id="fin-receita" class="text-2xl font-bold text-emerald-500 mt-1">R$ 0,00</h3>
+                    </div>
+                    <div class="card-tema bg-slate-950 border border-slate-800 p-5 rounded-2xl">
+                        <p class="lbl-titulo text-xs font-semibold text-slate-400 uppercase">Total de Saídas (Custos + Despesas)</p>
+                        <h3 id="fin-despesa" class="text-2xl font-bold text-rose-500 mt-1">R$ 0,00</h3>
+                    </div>
+                    <div class="card-tema bg-slate-950 border border-slate-800 p-5 rounded-2xl">
+                        <p class="lbl-titulo text-xs font-semibold text-slate-400 uppercase">Resultado Líquido Caixa</p>
+                        <h3 id="fin-lucro" class="lbl-valor text-2xl font-bold text-white mt-1">R$ 0,00</h3>
+                    </div>
+                </div>
+                <div class="card-tema bg-slate-950 border border-slate-800 p-6 rounded-2xl shadow-sm space-y-4">
+                    <h3 class="lbl-valor font-bold text-white text-base">Extrato Consolidado por Veículo</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-300 min-w-[700px]">
+                            <thead class="bg-slate-900 text-xs uppercase text-slate-400 table-header-tema">
+                                <tr>
+                                    <th class="p-3">Veículo</th>
+                                    <th class="p-3">Receitas</th>
+                                    <th class="p-3">Combustível</th>
+                                    <th class="p-3">Outras + Manut.</th>
+                                    <th class="p-3">Lucro Líquido</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-financeiro" class="divide-y divide-slate-800/60"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MANUTENÇÃO -->
+            <section id="tab-manutencao" class="space-y-6 hidden">
+                <div id="alertas-manutencao" class="space-y-2 hidden"></div>
+
+                <div class="card-tema bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-sm space-y-6">
+                    <div class="flex items-center justify-between">
+                        <h3 id="titulo-form-manutencao" class="lbl-valor font-bold text-white text-lg">Manutenções</h3>
+                        <button type="button" id="btn-toggle-manutencao" onclick="toggleCadastro('manutencao')" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm transition shadow inline-flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> <span id="lbl-toggle-manutencao">Nova Manutenção</span>
+                        </button>
+                    </div>
+                    <div id="box-form-manutencao" class="hidden pt-2 border-t border-slate-800/70">
+                        <form id="form-manutencao" onsubmit="salvarManutencao(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <input type="hidden" id="man-edit-index" value="">
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Data</label>
+                                <input type="date" id="man-data" required class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Veículo / Placa</label>
+                                <select id="man-veiculo" onchange="atualizarKmManutencao()" class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200"></select>
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">KM da Manutenção</label>
+                                <input type="number" min="0" id="man-km" placeholder="Ex: 489738" required oninput="atualizarProximaManutencaoAuto()" class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Serviço</label>
+                                <input type="text" id="man-servico" placeholder="Ex: Troca de óleo" required class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Oficina</label>
+                                <input type="text" id="man-oficina" placeholder="Ex: Oficina Martins" required class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Valor (R$)</label>
+                                <input type="number" step="0.01" min="0" id="man-valor" placeholder="0.00" required class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Próxima Revisão (KM)</label>
+                                <input type="number" min="0" id="man-prox-km" placeholder="Ex: 500000" data-auto="true" oninput="this.dataset.auto='false'" class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Próxima Revisão (Data)</label>
+                                <input type="date" id="man-prox-data" class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div class="sm:col-span-2 lg:col-span-4 flex justify-end">
+                                <button type="submit" id="btn-salvar-manutencao" class="bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-sm shadow">Registrar Manutenção</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- TABELA DE HISTÓRICO DE MANUTENÇÕES -->
+                <div class="card-tema bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-sm">
+                    <h3 class="lbl-valor font-bold text-white text-base mb-4">Histórico de Manutenções</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-300 min-w-[960px]">
+                            <thead class="bg-slate-900 text-xs uppercase text-slate-400 table-header-tema">
+                                <tr>
+                                    <th class="p-3">Data</th>
+                                    <th class="p-3">Veículo</th>
+                                    <th class="p-3">KM Manut.</th>
+                                    <th class="p-3">Serviço</th>
+                                    <th class="p-3">Oficina</th>
+                                    <th class="p-3">Valor</th>
+                                    <th class="p-3">Próx. Revisão</th>
+                                    <th class="p-3">Faltam (Tempo Real)</th>
+                                    <th class="p-3 text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-manutencoes" class="divide-y divide-slate-800/60"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VEÍCULOS -->
+            <section id="tab-veiculos" class="space-y-6 hidden">
+                <div class="card-tema bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-sm space-y-6">
+                    <div class="flex items-center justify-between">
+                        <h3 id="titulo-form-veiculo" class="lbl-valor font-bold text-white text-lg">Veículos</h3>
+                        <button type="button" id="btn-toggle-veiculo" onclick="toggleCadastro('veiculo')" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm transition shadow inline-flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> <span id="lbl-toggle-veiculo">Novo Veículo</span>
+                        </button>
+                    </div>
+                    <div id="box-form-veiculo" class="hidden pt-2 border-t border-slate-800/70">
+                        <form id="form-veiculo" onsubmit="adicionarVeiculo(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <input type="hidden" id="v-edit-index" value="">
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Placa do Veículo</label>
+                                <input type="text" id="v-placa" placeholder="Ex: ABC-1234" required class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200 uppercase">
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Modelo / Descrição</label>
+                                <input type="text" id="v-modelo" placeholder="Ex: Chevrolet Spin" required class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">KM Base / Inicial</label>
+                                <input type="number" min="0" id="v-kmbase" placeholder="Ex: 489738" required class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div class="sm:col-span-2 lg:col-span-3 flex justify-end">
+                                <button type="submit" id="btn-salvar-veiculo" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-sm shadow transition">Cadastrar Veículo</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card-tema bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-sm">
+                    <h3 class="lbl-valor font-bold text-white text-base mb-4">Veículos Cadastrados na Frota</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-300 min-w-[500px]">
+                            <thead class="bg-slate-900 text-xs uppercase text-slate-400 table-header-tema">
+                                <tr>
+                                    <th class="p-3">Placa</th>
+                                    <th class="p-3">Modelo</th>
+                                    <th class="p-3">KM Base</th>
+                                    <th class="p-3 text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-veiculos" class="divide-y divide-slate-800/60"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MOTORISTAS -->
+            <section id="tab-motoristas" class="space-y-6 hidden">
+                <div class="card-tema bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-sm space-y-6">
+                    <div class="flex items-center justify-between">
+                        <h3 id="titulo-form-motorista" class="lbl-valor font-bold text-white text-lg">Motoristas</h3>
+                        <button type="button" id="btn-toggle-motorista" onclick="toggleCadastro('motorista')" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm transition shadow inline-flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> <span id="lbl-toggle-motorista">Novo Motorista</span>
+                        </button>
+                    </div>
+                    <div id="box-form-motorista" class="hidden pt-2 border-t border-slate-800/70">
+                        <form id="form-motorista" onsubmit="adicionarMotorista(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <input type="hidden" id="m-edit-index" value="">
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Nome</label>
+                                <input type="text" id="m-nome" placeholder="Ex: Dalton" required class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">CNH</label>
+                                <input type="text" id="m-cnh" placeholder="Ex: 0000000000" required class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Telefone</label>
+                                <input type="text" id="m-telefone" placeholder="Ex: (22) 99999-9999" required class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div>
+                                <label class="lbl-titulo block text-xs font-semibold text-slate-300 mb-1">Meta (R$)</label>
+                                <input type="number" step="0.01" min="0" id="m-meta" placeholder="0.00" required class="input-tema w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200">
+                            </div>
+                            <div class="sm:col-span-2 lg:col-span-4 flex justify-end">
+                                <button type="submit" id="btn-salvar-motorista" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-sm shadow transition">Cadastrar Motorista</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card-tema bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-sm">
+                    <h3 class="lbl-valor font-bold text-white text-base mb-4">Motoristas Cadastrados</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-300 min-w-[500px]">
+                            <thead class="bg-slate-900 text-xs uppercase text-slate-400 table-header-tema">
+                                <tr>
+                                    <th class="p-3">Nome</th>
+                                    <th class="p-3">CNH</th>
+                                    <th class="p-3">Telefone</th>
+                                    <th class="p-3">Meta (R$)</th>
+                                    <th class="p-3 text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-motoristas" class="divide-y divide-slate-800/60"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- SCRIPT -->
+    <script>
+        const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbw3DbMJpeW8o_srVwL9qwWohgCvOlL6ohz8Ce8iWckrgHEFc5yqDOJS6OYaD-RF_kwl/exec';
+
+        const titles = {
+            'executivo': 'Dashboard Executivo',
+            'lancamentos': 'Lançar Novos Dados',
+            'painel': 'Painel Geral',
+            'quilometragem': 'Quilometragem e Desempenho',
+            'financeiro': 'Resumo Financeiro Detalhado',
+            'manutencao': 'Controle de Manutenção',
+            'veiculos': 'Cadastro e Gestão de Veículos',
+            'motoristas': 'Cadastro de Motoristas'
+        };
+
+        const cadastroConfig = {
+            lancamento: { box: 'box-form-lancamento', lbl: 'lbl-toggle-lancamento', btn: 'btn-toggle-lancamento', closedText: 'Novo Lançamento', openText: 'Fechar' },
+            manutencao: { box: 'box-form-manutencao', lbl: 'lbl-toggle-manutencao', btn: 'btn-toggle-manutencao', closedText: 'Nova Manutenção', openText: 'Fechar' },
+            veiculo: { box: 'box-form-veiculo', lbl: 'lbl-toggle-veiculo', btn: 'btn-toggle-veiculo', closedText: 'Novo Veículo', openText: 'Fechar' },
+            motorista: { box: 'box-form-motorista', lbl: 'lbl-toggle-motorista', btn: 'btn-toggle-motorista', closedText: 'Novo Motorista', openText: 'Fechar' }
+        };
+
+        function setCadastroVisivel(tipo, visivel) {
+            const cfg = cadastroConfig[tipo];
+            if (!cfg) return;
+            const box = document.getElementById(cfg.box);
+            const btn = document.getElementById(cfg.btn);
+            if (!box || !btn) return;
+
+            if (visivel) {
+                box.classList.remove('hidden');
+                btn.innerHTML = `<i class="fa-solid fa-xmark"></i> <span id="${cfg.lbl}">${cfg.openText}</span>`;
+                btn.classList.remove('bg-emerald-500', 'hover:bg-emerald-600', 'text-slate-950');
+                btn.classList.add('bg-slate-800', 'hover:bg-slate-700', 'text-slate-200');
+            } else {
+                box.classList.add('hidden');
+                btn.innerHTML = `<i class="fa-solid fa-plus"></i> <span id="${cfg.lbl}">${cfg.closedText}</span>`;
+                btn.classList.remove('bg-slate-800', 'hover:bg-slate-700', 'text-slate-200');
+                btn.classList.add('bg-emerald-500', 'hover:bg-emerald-600', 'text-slate-950');
+            }
+        }
+
+        function toggleCadastro(tipo) {
+            const cfg = cadastroConfig[tipo];
+            if (!cfg) return;
+            const box = document.getElementById(cfg.box);
+            if (!box) return;
+            const vaiAbrir = box.classList.contains('hidden');
+            setCadastroVisivel(tipo, vaiAbrir);
+        }
+
+        let veiculosDisponiveis = JSON.parse(localStorage.getItem('mobi_veiculos')) || [
+            { placa: 'KXK-1J19', modelo: 'Chevrolet Zafira', kmBase: 221109 },
+            { placa: 'KRR-6J69', modelo: 'Chevrolet Spin', kmBase: 494409 },
+            { placa: 'LQM-8B56', modelo: 'Chevrolet Spin', kmBase: 489738 },
+            { placa: 'PLU-4G38', modelo: 'Fiat Mobi', kmBase: 176541 }
+        ];
+
+        let lancamentos = JSON.parse(localStorage.getItem('mobi_lancamentos')) || [
+            { data: '2026-10-01', veiculo: 'LQM-8B56', motorista: 'Dalton', kmInicial: 483017, kmFinal: 483413, km: 396, tipoCombustivel: 'GNV', combustivel: 180.00, receita: 873.90, despesa: 30.40 }
+        ];
+
+        let motoristas = JSON.parse(localStorage.getItem('mobi_motoristas')) || [
+            { nome: 'Dalton', cnh: '681176555', telefone: '(22) 99783-8320', meta: 0 },
+            { nome: 'Martins', cnh: '681176888', telefone: '(22) 98765-3421', meta: 0 },
+            { nome: 'Alexandre', cnh: '-', telefone: '-', meta: 0 },
+            { nome: 'Dhionatam', cnh: '-', telefone: '-', meta: 0 }
+        ];
+
+        let manutencoes = JSON.parse(localStorage.getItem('mobi_manutencoes')) || [];
+
+        let chartReceitaKm, chartKmVeiculo;
+
+        function atualizarStatusConexao(estado) {
+            const badge = document.getElementById('status-conexao');
+            if (!badge) return;
+            if (estado === 'ok') {
+                badge.className = 'hidden sm:flex text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 px-3 py-1.5 rounded-full font-semibold items-center gap-1.5';
+                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Planilha Conectada';
+            } else if (estado === 'sync') {
+                badge.className = 'hidden sm:flex text-xs bg-amber-500/10 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-full font-semibold items-center gap-1.5';
+                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Sincronizando...';
+            } else {
+                badge.className = 'hidden sm:flex text-xs bg-rose-500/10 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-full font-semibold items-center gap-1.5';
+                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-400"></span> Modo Local';
+            }
+        }
+
+        function salvarLocal() {
+            localStorage.setItem('mobi_veiculos', JSON.stringify(veiculosDisponiveis));
+            localStorage.setItem('mobi_motoristas', JSON.stringify(motoristas));
+            localStorage.setItem('mobi_lancamentos', JSON.stringify(lancamentos));
+            localStorage.setItem('mobi_manutencoes', JSON.stringify(manutencoes));
+        }
+
+        async function enviarParaPlanilha() {
+            if (!SHEETS_API_URL) return;
+            atualizarStatusConexao('sync');
+            try {
+                await fetch(SHEETS_API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        veiculos: veiculosDisponiveis,
+                        motoristas: motoristas,
+                        lancamentos: lancamentos,
+                        manutencoes: manutencoes
+                    })
+                });
+                atualizarStatusConexao('ok');
+            } catch {
+                atualizarStatusConexao('offline');
+            }
+        }
+
+        async function carregarDaPlanilha() {
+            if (!SHEETS_API_URL) return false;
+            atualizarStatusConexao('sync');
+            try {
+                const resp = await fetch(SHEETS_API_URL);
+                const data = await resp.json();
+                if (data && Array.isArray(data.veiculos) && data.veiculos.length > 0) {
+                    veiculosDisponiveis = data.veiculos.map(v => ({
+                        placa: String(v.placa || '').toUpperCase(),
+                        modelo: String(v.modelo || ''),
+                        kmBase: parseFloat(v.kmBase) || 0
+                    }));
+                }
+                if (data && Array.isArray(data.motoristas) && data.motoristas.length > 0) {
+                    motoristas = data.motoristas.map(m => ({
+                        nome: String(m.nome || ''),
+                        cnh: String(m.cnh || '-'),
+                        telefone: String(m.telefone || '-'),
+                        meta: parseFloat(m.meta) || 0
+                    }));
+                }
+                if (data && Array.isArray(data.lancamentos)) {
+                    lancamentos = data.lancamentos.map(l => ({
+                        data: String(l.data || '').slice(0, 10),
+                        veiculo: String(l.veiculo || '').toUpperCase(),
+                        motorista: String(l.motorista || ''),
+                        kmInicial: parseFloat(l.kmInicial) || 0,
+                        kmFinal: parseFloat(l.kmFinal) || 0,
+                        km: parseFloat(l.km) || 0,
+                        tipoCombustivel: String(l.tipoCombustivel || 'GNV'),
+                        combustivel: parseFloat(l.combustivel) || 0,
+                        receita: parseFloat(l.receita) || 0,
+                        despesa: parseFloat(l.despesa) || 0
+                    }));
+                }
+                if (data && Array.isArray(data.manutencoes)) {
+                    manutencoes = data.manutencoes.map(m => ({
+                        data: String(m.data || '').slice(0, 10),
+                        veiculo: String(m.veiculo || '').toUpperCase(),
+                        kmManutencao: parseFloat(m.kmManutencao) || 0,
+                        servico: String(m.servico || ''),
+                        oficina: String(m.oficina || ''),
+                        valor: parseFloat(m.valor) || 0,
+                        proxKm: parseFloat(m.proxKm) || 0,
+                        proxData: String(m.proxData || '').slice(0, 10)
+                    }));
+                }
+                salvarLocal();
+                atualizarStatusConexao('ok');
+                return true;
+            } catch {
+                atualizarStatusConexao('offline');
+                return false;
+            }
+        }
+
+        function atualizarRelogioTopo() {
+            const elDate = document.getElementById('header-date-text');
+            const elTime = document.getElementById('header-time-text');
+            if (!elDate || !elTime) return;
+            const agora = new Date();
+            elDate.innerText = agora.toLocaleDateString('pt-BR', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+            elTime.innerText = agora.toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+            document.getElementById('sidebar-overlay').classList.toggle('hidden');
+        }
+
+        function atualizarTemaGraficos(isLight) {
+            const textColor = isLight ? '#0f172a' : '#e2e8f0';
+            const gridColor = isLight ? 'rgba(15, 23, 42, 0.08)' : 'rgba(148, 163, 184, 0.12)';
+            [chartReceitaKm, chartKmVeiculo].forEach(chart => {
+                if (!chart) return;
+                chart.options.plugins.datalabels.color = textColor;
+                chart.options.scales.x.ticks.color = textColor;
+                chart.options.scales.y.ticks.color = textColor;
+                chart.options.scales.x.grid.color = gridColor;
+                chart.options.scales.y.grid.color = gridColor;
+                chart.update();
+            });
+        }
+
+        function aplicarTema(modo) {
+            const body = document.getElementById('app-body');
+            const mainContent = document.getElementById('main-content');
+            const header = document.getElementById('app-header');
+            const sidebar = document.getElementById('sidebar');
+            const cards = document.querySelectorAll('.card-tema');
+            const titulos = document.querySelectorAll('.lbl-titulo');
+            const valores = document.querySelectorAll('.lbl-valor');
+            const inputs = document.querySelectorAll('.input-tema');
+            const tableHeaders = document.querySelectorAll('.table-header-tema');
+            const themeBtn = document.getElementById('theme-btn');
+            const syncBtn = document.getElementById('sync-btn');
+            const backupExpBtn = document.getElementById('backup-exp-btn');
+            const backupImpBtn = document.getElementById('backup-imp-btn');
+            const icon = document.getElementById('theme-icon');
+            const text = document.getElementById('theme-text');
+            const logoTitle = document.getElementById('logo-title');
+
+            const isLight = modo === 'light';
+            localStorage.setItem('mobi_theme', modo);
+
+            if (isLight) {
+                body.classList.remove('bg-slate-900', 'text-slate-100');
+                body.classList.add('bg-slate-100', 'text-slate-900');
+                mainContent.classList.remove('bg-slate-900');
+                mainContent.classList.add('bg-slate-100');
+                header.classList.remove('bg-slate-950', 'border-slate-800');
+                header.classList.add('bg-white', 'border-slate-200');
+                sidebar.classList.remove('bg-slate-950', 'border-slate-800');
+                sidebar.classList.add('bg-white', 'border-slate-200');
+                logoTitle.classList.remove('text-white');
+                logoTitle.classList.add('text-slate-900');
+                cards.forEach(card => {
+                    card.classList.remove('bg-slate-950', 'border-slate-800');
+                    card.classList.add('bg-white', 'border-slate-300', 'shadow-md');
+                });
+                titulos.forEach(t => {
+                    t.classList.remove('text-slate-400', 'text-slate-300');
+                    t.classList.add('text-slate-700', 'font-bold');
+                });
+                valores.forEach(v => {
+                    v.classList.remove('text-white');
+                    v.classList.add('text-slate-900');
+                });
+                inputs.forEach(i => {
+                    i.classList.remove('bg-slate-900', 'border-slate-700', 'text-slate-200');
+                    i.classList.add('bg-slate-50', 'border-slate-300', 'text-slate-900');
+                });
+                tableHeaders.forEach(th => {
+                    th.classList.remove('bg-slate-900', 'text-slate-400');
+                    th.classList.add('bg-slate-200', 'text-slate-800');
+                });
+                [themeBtn, syncBtn, backupExpBtn, backupImpBtn].forEach(btn => {
+                    if (!btn) return;
+                    btn.classList.remove('bg-slate-900', 'border-slate-700', 'text-slate-200');
+                    btn.classList.add('bg-slate-100', 'border-slate-300', 'text-slate-800');
+                });
+                icon.className = 'fa-solid fa-sun text-amber-500';
+                text.innerText = 'Modo Escuro';
+            } else {
+                body.classList.remove('bg-slate-100', 'text-slate-900');
+                body.classList.add('bg-slate-900', 'text-slate-100');
+                mainContent.classList.remove('bg-slate-100');
+                mainContent.classList.add('bg-slate-900');
+                header.classList.remove('bg-white', 'border-slate-200');
+                header.classList.add('bg-slate-950', 'border-slate-800');
+                sidebar.classList.remove('bg-white', 'border-slate-200');
+                sidebar.classList.add('bg-slate-950', 'border-slate-800');
+                logoTitle.classList.remove('text-slate-900');
+                logoTitle.classList.add('text-white');
+                cards.forEach(card => {
+                    card.classList.remove('bg-white', 'border-slate-300', 'shadow-md');
+                    card.classList.add('bg-slate-950', 'border-slate-800');
+                });
+                titulos.forEach(t => {
+                    t.classList.remove('text-slate-700', 'font-bold');
+                    t.classList.add('text-slate-400');
+                });
+                valores.forEach(v => {
+                    v.classList.remove('text-slate-900');
+                    v.classList.add('text-white');
+                });
+                inputs.forEach(i => {
+                    i.classList.remove('bg-slate-50', 'border-slate-300', 'text-slate-900');
+                    i.classList.add('bg-slate-900', 'border-slate-700', 'text-slate-200');
+                });
+                tableHeaders.forEach(th => {
+                    th.classList.remove('bg-slate-200', 'text-slate-800');
+                    th.classList.add('bg-slate-900', 'text-slate-400');
+                });
+                [themeBtn, syncBtn, backupExpBtn, backupImpBtn].forEach(btn => {
+                    if (!btn) return;
+                    btn.classList.remove('bg-slate-100', 'border-slate-300', 'text-slate-800');
+                    btn.classList.add('bg-slate-900', 'border-slate-700', 'text-slate-200');
+                });
+                icon.className = 'fa-solid fa-moon text-amber-400';
+                text.innerText = 'Modo Claro';
+            }
+
+            atualizarTemaGraficos(isLight);
+        }
+
+        function toggleTheme() {
+            const isCurrentlyDark = document.getElementById('app-body').classList.contains('bg-slate-900');
+            aplicarTema(isCurrentlyDark ? 'light' : 'dark');
+        }
+
+        function switchTab(tabId, evt) {
+            document.querySelectorAll('main section').forEach(sec => sec.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-emerald-500/10', 'text-emerald-500', 'border', 'border-emerald-500/30');
+                btn.classList.add('text-slate-400', 'hover:bg-slate-800/50', 'hover:text-slate-200');
+            });
+            
+            if (evt && evt.currentTarget) {
+                evt.currentTarget.classList.remove('text-slate-400', 'hover:bg-slate-800/50', 'hover:text-slate-200');
+                evt.currentTarget.classList.add('bg-emerald-500/10', 'text-emerald-500', 'border', 'border-emerald-500/30');
+            }
+            
+            document.getElementById('page-title').innerText = titles[tabId];
+            if (window.innerWidth < 768) toggleSidebar();
+        }
+
+        function popularSelects() {
+            const selectV1 = document.getElementById('l-veiculo');
+            const selectV2 = document.getElementById('man-veiculo');
+            const selectM = document.getElementById('l-motorista');
+
+            let optV = '';
+            veiculosDisponiveis.forEach(v => {
+                optV += `<option value="${v.placa}">${v.placa} (${v.modelo})</option>`;
+            });
+            if(selectV1) selectV1.innerHTML = optV;
+            if(selectV2) selectV2.innerHTML = optV;
+
+            let optM = '';
+            motoristas.forEach(m => {
+                optM += `<option value="${m.nome}">${m.nome}</option>`;
+            });
+            if(selectM) selectM.innerHTML = optM;
+
+            let htmlVeiculos = '';
+            veiculosDisponiveis.forEach((v, idx) => {
+                htmlVeiculos += `
+                    <tr>
+                        <td class="p-3 font-semibold text-emerald-400">${v.placa}</td>
+                        <td class="p-3">${v.modelo}</td>
+                        <td class="p-3">${v.kmBase.toLocaleString('pt-BR')} km</td>
+                        <td class="p-3 text-right space-x-2 whitespace-nowrap">
+                            <button type="button" onclick="editarVeiculo(${idx})" class="bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-pen"></i> Editar
+                            </button>
+                            <button type="button" onclick="excluirVeiculo(${idx})" class="bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-trash"></i> Excluir
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            if(document.getElementById('tabela-veiculos')) {
+                document.getElementById('tabela-veiculos').innerHTML = htmlVeiculos;
+            }
+
+            let htmlMotoristas = '';
+            motoristas.forEach((m, idx) => {
+                htmlMotoristas += `
+                    <tr>
+                        <td class="p-3 font-semibold text-emerald-400">${m.nome}</td>
+                        <td class="p-3">${m.cnh}</td>
+                        <td class="p-3">${m.telefone}</td>
+                        <td class="p-3 font-bold">R$ ${(m.meta || 0).toFixed(2)}</td>
+                        <td class="p-3 text-right space-x-2 whitespace-nowrap">
+                            <button type="button" onclick="editarMotorista(${idx})" class="bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-pen"></i> Editar
+                            </button>
+                            <button type="button" onclick="excluirMotorista(${idx})" class="bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-trash"></i> Excluir
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            if(document.getElementById('tabela-motoristas')) {
+                document.getElementById('tabela-motoristas').innerHTML = htmlMotoristas;
+            }
+        }
+
+        function editarVeiculo(idx) {
+            const v = veiculosDisponiveis[idx];
+            if (!v) return;
+            setCadastroVisivel('veiculo', true);
+            document.getElementById('v-edit-index').value = idx;
+            document.getElementById('v-placa').value = v.placa;
+            document.getElementById('v-modelo').value = v.modelo;
+            document.getElementById('v-kmbase').value = v.kmBase;
+            document.getElementById('titulo-form-veiculo').innerText = `Editando Veículo: ${v.placa}`;
+            document.getElementById('btn-salvar-veiculo').innerText = 'Salvar Alterações';
+            document.getElementById('v-placa').focus();
+        }
+
+        function cancelarEdicaoVeiculo() {
+            document.getElementById('v-edit-index').value = '';
+            document.getElementById('form-veiculo').reset();
+            document.getElementById('titulo-form-veiculo').innerText = 'Veículos';
+            document.getElementById('btn-salvar-veiculo').innerText = 'Cadastrar Veículo';
+            setCadastroVisivel('veiculo', false);
+        }
+
+        function excluirVeiculo(idx) {
+            const v = veiculosDisponiveis[idx];
+            if (!v) return;
+            const emUso = lancamentos.some(l => l.veiculo === v.placa) || manutencoes.some(m => m.veiculo === v.placa);
+            if (emUso) {
+                alert(`Não é possível excluir ${v.placa}: existem lançamentos ou manutenções vinculados a este veículo.`);
+                return;
+            }
+            if (!confirm(`Excluir veículo ${v.placa} (${v.modelo})?`)) return;
+            veiculosDisponiveis.splice(idx, 1);
+            salvarLocal();
+            enviarParaPlanilha();
+            cancelarEdicaoVeiculo();
+            popularSelects();
+            atualizarKmInicial();
+            atualizarKmManutencao();
+        }
+
+        function adicionarVeiculo(e) {
+            e.preventDefault();
+            const editIdx = document.getElementById('v-edit-index').value;
+            const placa = document.getElementById('v-placa').value.trim().toUpperCase();
+            const modelo = document.getElementById('v-modelo').value.trim();
+            const kmBase = parseFloat(document.getElementById('v-kmbase').value) || 0;
+
+            if (editIdx !== '') {
+                const idx = parseInt(editIdx, 10);
+                const placaAntiga = veiculosDisponiveis[idx].placa;
+                if (veiculosDisponiveis.some((v, i) => i !== idx && v.placa === placa)) {
+                    alert('Já existe outro veículo cadastrado com esta placa!');
+                    return;
+                }
+                veiculosDisponiveis[idx] = { placa, modelo, kmBase };
+                if (placaAntiga !== placa) {
+                    lancamentos.forEach(item => {
+                        if (item.veiculo === placaAntiga) item.veiculo = placa;
+                    });
+                    manutencoes.forEach(item => {
+                        if (item.veiculo === placaAntiga) item.veiculo = placa;
+                    });
+                }
+                salvarLocal();
+                enviarParaPlanilha();
+                cancelarEdicaoVeiculo();
+                popularSelects();
+                atualizarKmInicial();
+                atualizarKmManutencao();
+                atualizarPainel();
+                alert('Veículo atualizado e salvo na planilha!');
+                return;
+            }
+
+            if(veiculosDisponiveis.some(v => v.placa === placa)) {
+                alert('Já existe um veículo cadastrado com esta placa!');
+                return;
+            }
+
+            veiculosDisponiveis.push({ placa, modelo, kmBase });
+            salvarLocal();
+            enviarParaPlanilha();
+            cancelarEdicaoVeiculo();
+            popularSelects();
+            atualizarKmInicial();
+            atualizarKmManutencao();
+            alert('Veículo cadastrado e salvo na planilha!');
+        }
+
+        function editarMotorista(idx) {
+            const m = motoristas[idx];
+            if (!m) return;
+            setCadastroVisivel('motorista', true);
+            document.getElementById('m-edit-index').value = idx;
+            document.getElementById('m-nome').value = m.nome;
+            document.getElementById('m-cnh').value = m.cnh === '-' ? '' : m.cnh;
+            document.getElementById('m-telefone').value = m.telefone === '-' ? '' : m.telefone;
+            document.getElementById('m-meta').value = m.meta || 0;
+            document.getElementById('titulo-form-motorista').innerText = `Editando Motorista: ${m.nome}`;
+            document.getElementById('btn-salvar-motorista').innerText = 'Salvar Alterações';
+            document.getElementById('m-nome').focus();
+        }
+
+        function cancelarEdicaoMotorista() {
+            document.getElementById('m-edit-index').value = '';
+            document.getElementById('form-motorista').reset();
+            document.getElementById('titulo-form-motorista').innerText = 'Motoristas';
+            document.getElementById('btn-salvar-motorista').innerText = 'Cadastrar Motorista';
+            setCadastroVisivel('motorista', false);
+        }
+
+        function excluirMotorista(idx) {
+            const m = motoristas[idx];
+            if (!m) return;
+            if (lancamentos.some(l => l.motorista === m.nome)) {
+                alert(`Não é possível excluir ${m.nome}: existem lançamentos vinculados a este motorista.`);
+                return;
+            }
+            if (!confirm(`Excluir motorista ${m.nome}?`)) return;
+            motoristas.splice(idx, 1);
+            salvarLocal();
+            enviarParaPlanilha();
+            cancelarEdicaoMotorista();
+            popularSelects();
+            atualizarPainel();
+        }
+
+        function adicionarMotorista(e) {
+            e.preventDefault();
+            const editIdx = document.getElementById('m-edit-index').value;
+            const nome = document.getElementById('m-nome').value.trim();
+            const cnh = document.getElementById('m-cnh').value.trim();
+            const telefone = document.getElementById('m-telefone').value.trim();
+            const meta = parseFloat(document.getElementById('m-meta').value) || 0;
+
+            if (editIdx !== '') {
+                const idx = parseInt(editIdx, 10);
+                const nomeAntigo = motoristas[idx].nome;
+                motoristas[idx] = { nome, cnh, telefone, meta };
+                if (nomeAntigo !== nome) {
+                    lancamentos.forEach(item => {
+                        if (item.motorista === nomeAntigo) item.motorista = nome;
+                    });
+                }
+                salvarLocal();
+                enviarParaPlanilha();
+                cancelarEdicaoMotorista();
+                popularSelects();
+                atualizarPainel();
+                alert('Motorista atualizado e salvo na planilha!');
+                return;
+            }
+
+            if (motoristas.some(m => m.nome.toLowerCase() === nome.toLowerCase())) {
+                alert('Já existe um motorista cadastrado com este nome!');
+                return;
+            }
+
+            motoristas.push({ nome, cnh, telefone, meta });
+            salvarLocal();
+            enviarParaPlanilha();
+            cancelarEdicaoMotorista();
+            popularSelects();
+            atualizarPainel();
+            alert('Motorista cadastrado e salvo na planilha!');
+        }
+
+        function obterUltimoKmVeiculo(placa) {
+            const veiculo = veiculosDisponiveis.find(v => v.placa === placa);
+            let ultimoKm = veiculo ? (parseFloat(veiculo.kmBase) || 0) : 0;
+
+            lancamentos.forEach(item => {
+                if (item.veiculo === placa) {
+                    const kmFim = parseFloat(item.kmFinal) || 0;
+                    if (kmFim > ultimoKm) ultimoKm = kmFim;
+                }
+            });
+
+            manutencoes.forEach(item => {
+                if (item.veiculo === placa) {
+                    const kmMan = parseFloat(item.kmManutencao) || 0;
+                    if (kmMan > ultimoKm) ultimoKm = kmMan;
+                }
+            });
+
+            return ultimoKm;
+        }
+
+        function atualizarKmInicial() {
+            const editIdx = document.getElementById('l-edit-index').value;
+            if (editIdx !== '') return;
+
+            const placa = document.getElementById('l-veiculo').value;
+            const veiculo = veiculosDisponiveis.find(v => v.placa === placa);
+            if (!veiculo) return;
+
+            document.getElementById('l-km-inicial').value = obterUltimoKmVeiculo(placa);
+            calcularKmRodados();
+        }
+
+        function atualizarKmManutencao() {
+            const editIdx = document.getElementById('man-edit-index').value;
+            if (editIdx !== '') return;
+
+            const placa = document.getElementById('man-veiculo').value;
+            if (!placa) return;
+
+            const ultimoKm = obterUltimoKmVeiculo(placa);
+            document.getElementById('man-km').value = ultimoKm;
+            atualizarProximaManutencaoAuto();
+        }
+
+        function atualizarProximaManutencaoAuto() {
+            const proxInput = document.getElementById('man-prox-km');
+            const kmAtual = parseFloat(document.getElementById('man-km').value) || 0;
+            if (!proxInput) return;
+
+            if (proxInput.dataset.auto === 'true' || !proxInput.value) {
+                proxInput.dataset.auto = 'true';
+                proxInput.value = kmAtual > 0 ? kmAtual + 10000 : '';
+            }
+        }
+
+        function calcularKmRodados() {
+            const ini = parseFloat(document.getElementById('l-km-inicial').value) || 0;
+            const fim = parseFloat(document.getElementById('l-km-final').value) || 0;
+            const total = fim >= ini ? fim - ini : 0;
+            document.getElementById('l-km-total').value = total + ' km';
+        }
+
+        function editarLancamento(idx) {
+            const item = lancamentos[idx];
+            if (!item) return;
+
+            setCadastroVisivel('lancamento', true);
+            document.getElementById('l-edit-index').value = idx;
+            document.getElementById('l-data').value = item.data || '';
+            document.getElementById('l-veiculo').value = item.veiculo;
+            document.getElementById('l-motorista').value = item.motorista;
+            document.getElementById('l-km-inicial').value = item.kmInicial;
+            document.getElementById('l-km-final').value = item.kmFinal;
+            document.getElementById('l-tipo-combustivel').value = item.tipoCombustivel || 'GNV';
+            document.getElementById('l-combustivel').value = item.combustivel;
+            document.getElementById('l-receita').value = item.receita;
+            document.getElementById('l-despesa').value = item.despesa;
+
+            calcularKmRodados();
+
+            document.getElementById('titulo-form-lancamento').innerText = `Editando Lançamento (${item.data || ''} - ${item.veiculo})`;
+            document.getElementById('btn-salvar-lancamento').innerText = 'Salvar Alterações';
+            document.getElementById('form-lancamento').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cancelarEdicaoLancamento() {
+            document.getElementById('l-edit-index').value = '';
+            document.getElementById('form-lancamento').reset();
+            document.getElementById('l-data').valueAsDate = new Date();
+            document.getElementById('titulo-form-lancamento').innerText = 'Lançamentos Diários';
+            document.getElementById('btn-salvar-lancamento').innerText = 'Salvar Lançamento';
+            setCadastroVisivel('lancamento', false);
+            atualizarKmInicial();
+        }
+
+        function excluirLancamento(idx) {
+            const item = lancamentos[idx];
+            if (!item) return;
+
+            const confirmado = confirm(`Excluir lançamento de ${item.data || '-'} (${item.veiculo} - ${item.motorista})?`);
+            if (!confirmado) return;
+
+            lancamentos.splice(idx, 1);
+            salvarLocal();
+            enviarParaPlanilha();
+
+            const editIdx = document.getElementById('l-edit-index').value;
+            if (editIdx !== '') {
+                const parsedEdit = parseInt(editIdx, 10);
+                if (parsedEdit === idx) {
+                    cancelarEdicaoLancamento();
+                } else if (parsedEdit > idx) {
+                    document.getElementById('l-edit-index').value = parsedEdit - 1;
+                }
+            } else {
+                atualizarKmInicial();
+                atualizarKmManutencao();
+            }
+
+            atualizarPainel();
+        }
+
+        function adicionarLancamento(e) {
+            e.preventDefault();
+            const editIdx = document.getElementById('l-edit-index').value;
+            const ini = parseFloat(document.getElementById('l-km-inicial').value) || 0;
+            const fim = parseFloat(document.getElementById('l-km-final').value) || 0;
+
+            if (fim <= ini) {
+                alert(`O KM Final (${fim}) deve ser maior que o KM Inicial (${ini}).`);
+                document.getElementById('l-km-final').focus();
+                return;
+            }
+
+            const km = fim - ini;
+
+            const novoRegistro = {
+                data: document.getElementById('l-data').value,
+                veiculo: document.getElementById('l-veiculo').value,
+                motorista: document.getElementById('l-motorista').value,
+                kmInicial: ini, 
+                kmFinal: fim, 
+                km: km,
+                tipoCombustivel: document.getElementById('l-tipo-combustivel').value,
+                combustivel: parseFloat(document.getElementById('l-combustivel').value) || 0,
+                receita: parseFloat(document.getElementById('l-receita').value) || 0,
+                despesa: parseFloat(document.getElementById('l-despesa').value) || 0
+            };
+
+            if (editIdx !== '') {
+                const idx = parseInt(editIdx, 10);
+                lancamentos[idx] = novoRegistro;
+                salvarLocal();
+                enviarParaPlanilha();
+                cancelarEdicaoLancamento();
+                atualizarKmManutencao();
+                atualizarPainel();
+                alert('Lançamento atualizado e salvo na planilha!');
+                return;
+            }
+
+            lancamentos.push(novoRegistro);
+            salvarLocal();
+            enviarParaPlanilha();
+            cancelarEdicaoLancamento();
+            atualizarKmManutencao();
+            atualizarPainel();
+            alert('Lançamento salvo na planilha!');
+        }
+
+        function salvarManutencao(e) {
+            e.preventDefault();
+            const editIdx = document.getElementById('man-edit-index').value;
+            const kmMan = parseFloat(document.getElementById('man-km').value) || 0;
+            const proxInput = document.getElementById('man-prox-km');
+            const proxKm = parseFloat(proxInput.value) || (kmMan > 0 ? kmMan + 10000 : 0);
+
+            const registro = {
+                data: document.getElementById('man-data').value,
+                veiculo: document.getElementById('man-veiculo').value,
+                kmManutencao: kmMan,
+                servico: document.getElementById('man-servico').value.trim(),
+                oficina: document.getElementById('man-oficina').value.trim(),
+                valor: parseFloat(document.getElementById('man-valor').value) || 0,
+                proxKm: proxKm,
+                proxData: document.getElementById('man-prox-data').value || ''
+            };
+
+            if (editIdx !== '') {
+                manutencoes[parseInt(editIdx, 10)] = registro;
+                salvarLocal();
+                enviarParaPlanilha();
+                cancelarEdicaoManutencao();
+                atualizarKmInicial();
+                atualizarKmManutencao();
+                atualizarPainel();
+                alert('Manutenção atualizada e salva na planilha!');
+                return;
+            }
+
+            manutencoes.push(registro);
+            salvarLocal();
+            enviarParaPlanilha();
+            cancelarEdicaoManutencao();
+            atualizarKmInicial();
+            atualizarKmManutencao();
+            atualizarPainel();
+            alert('Manutenção registrada e salva na planilha!');
+        }
+
+        function editarManutencao(idx) {
+            const item = manutencoes[idx];
+            if (!item) return;
+            setCadastroVisivel('manutencao', true);
+            const proxInput = document.getElementById('man-prox-km');
+            document.getElementById('man-edit-index').value = idx;
+            document.getElementById('man-data').value = item.data || '';
+            document.getElementById('man-veiculo').value = item.veiculo;
+            document.getElementById('man-km').value = item.kmManutencao || '';
+            document.getElementById('man-servico').value = item.servico;
+            document.getElementById('man-oficina').value = item.oficina;
+            document.getElementById('man-valor').value = item.valor;
+            proxInput.value = item.proxKm || '';
+            proxInput.dataset.auto = 'false';
+            document.getElementById('man-prox-data').value = item.proxData || '';
+            document.getElementById('titulo-form-manutencao').innerText = `Editando Manutenção (${item.veiculo})`;
+            document.getElementById('btn-salvar-manutencao').innerText = 'Salvar Alterações';
+            document.getElementById('form-manutencao').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cancelarEdicaoManutencao() {
+            const proxInput = document.getElementById('man-prox-km');
+            document.getElementById('man-edit-index').value = '';
+            document.getElementById('form-manutencao').reset();
+            document.getElementById('man-data').valueAsDate = new Date();
+            if (proxInput) proxInput.dataset.auto = 'true';
+            document.getElementById('titulo-form-manutencao').innerText = 'Manutenções';
+            document.getElementById('btn-salvar-manutencao').innerText = 'Registrar Manutenção';
+            setCadastroVisivel('manutencao', false);
+            atualizarKmManutencao();
+        }
+
+        function excluirManutencao(idx) {
+            const item = manutencoes[idx];
+            if (!item) return;
+            if (!confirm(`Excluir manutenção "${item.servico}" do veículo ${item.veiculo}?`)) return;
+            manutencoes.splice(idx, 1);
+            salvarLocal();
+            enviarParaPlanilha();
+            const editIdx = document.getElementById('man-edit-index').value;
+            if (editIdx !== '') {
+                const parsed = parseInt(editIdx, 10);
+                if (parsed === idx) cancelarEdicaoManutencao();
+                else if (parsed > idx) document.getElementById('man-edit-index').value = parsed - 1;
+            }
+            atualizarKmInicial();
+            atualizarKmManutencao();
+            atualizarPainel();
+        }
+
+        function renderizarManutencoesEAlertas() {
+            const tbody = document.getElementById('tabela-manutencoes');
+            const alertasBoxMan = document.getElementById('alertas-manutencao');
+            const alertasBoxExec = document.getElementById('alertas-executivo');
+
+            const kmAtualPorVeiculo = {};
+            veiculosDisponiveis.forEach(v => {
+                kmAtualPorVeiculo[v.placa] = obterUltimoKmVeiculo(v.placa);
+            });
+
+            const hojeStr = new Date().toISOString().slice(0, 10);
+            const hojeMs = new Date(hojeStr + 'T00:00:00').getTime();
+            const alertas = [];
+            let htmlMan = '';
+
+            const manOrdenadas = manutencoes
+                .map((m, idx) => ({ m, idx }))
+                .sort((a, b) => (b.m.data || '').localeCompare(a.m.data || ''));
+
+            manOrdenadas.forEach(({ m, idx }) => {
+                const kmAtual = kmAtualPorVeiculo[m.veiculo] || 0;
+                const kmMan = m.kmManutencao || 0;
+                const proxKm = m.proxKm || 0;
+                const proxData = m.proxData || '';
+
+                let statusBadge = '<span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400">Em dia</span>';
+                let motivoAlerta = '';
+                const faltamPartes = [];
+
+                if (proxKm > 0) {
+                    const diffKm = proxKm - kmAtual;
+                    if (diffKm <= 0) {
+                        faltamPartes.push(`<span class="text-rose-400 font-bold">Vencido há ${Math.abs(diffKm).toLocaleString('pt-BR')} km</span>`);
+                        statusBadge = '<span class="text-xs px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-400 font-semibold">Vencida por KM</span>';
+                        motivoAlerta = `${m.veiculo} — ${m.servico}: vencido há ${Math.abs(diffKm).toLocaleString('pt-BR')} km (atual ${kmAtual.toLocaleString('pt-BR')} km / limite ${proxKm.toLocaleString('pt-BR')} km)`;
+                    } else {
+                        faltamPartes.push(`<span class="text-cyan-400 font-bold">Faltam ${diffKm.toLocaleString('pt-BR')} km</span>`);
+                        if (diffKm <= 1000) {
+                            statusBadge = '<span class="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 font-semibold">Próxima por KM</span>';
+                            motivoAlerta = `${m.veiculo} — ${m.servico}: faltam ${diffKm.toLocaleString('pt-BR')} km para revisão`;
+                        }
+                    }
+                }
+
+                if (proxData) {
+                    const diffDias = Math.round((new Date(proxData + 'T00:00:00').getTime() - hojeMs) / (1000 * 60 * 60 * 24));
+                    if (diffDias < 0) {
+                        faltamPartes.push(`<span class="text-rose-400 font-bold">Vencido há ${Math.abs(diffDias)} dia(s)</span>`);
+                        statusBadge = '<span class="text-xs px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-400 font-semibold">Vencida por Data</span>';
+                        motivoAlerta = `${m.veiculo} — ${m.servico}: vencida há ${Math.abs(diffDias)} dia(s) (${proxData})`;
+                    } else if (diffDias === 0) {
+                        faltamPartes.push(`<span class="text-amber-400 font-bold">Hoje</span>`);
+                        statusBadge = '<span class="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 font-semibold">Vence Hoje</span>';
+                        motivoAlerta = `${m.veiculo} — ${m.servico}: revisão prevista para hoje (${proxData})`;
+                    } else {
+                        faltamPartes.push(`<span class="text-emerald-400 font-bold">Faltam ${diffDias} dia(s)</span>`);
+                        if (diffDias <= 7 && !motivoAlerta) {
+                            statusBadge = '<span class="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 font-semibold">Próxima por Data</span>';
+                            motivoAlerta = `${m.veiculo} — ${m.servico}: faltam ${diffDias} dia(s) (${proxData})`;
+                        }
+                    }
+                }
+
+                if (motivoAlerta) alertas.push(motivoAlerta);
+
+                const resumoProx = [
+                    proxKm > 0 ? `${proxKm.toLocaleString('pt-BR')} km` : null,
+                    proxData || null
+                ].filter(Boolean).join(' | ') || '-';
+
+                const faltamTempoReal = faltamPartes.length > 0 ? faltamPartes.join(' • ') : '-';
+
+                htmlMan += `
+                    <tr>
+                        <td class="p-3">${m.data || '-'}</td>
+                        <td class="p-3 font-semibold text-emerald-400">${m.veiculo}</td>
+                        <td class="p-3 font-bold">${kmMan > 0 ? `${kmMan.toLocaleString('pt-BR')} km` : '-'}</td>
+                        <td class="p-3">${m.servico}</td>
+                        <td class="p-3">${m.oficina}</td>
+                        <td class="p-3 text-rose-400 font-bold">R$ ${(m.valor || 0).toFixed(2)}</td>
+                        <td class="p-3">${resumoProx} ${statusBadge}</td>
+                        <td class="p-3">${faltamTempoReal}</td>
+                        <td class="p-3 text-right space-x-2 whitespace-nowrap">
+                            <button type="button" onclick="editarManutencao(${idx})" class="bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 px-2.5 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition">
+                                <i class="fa-solid fa-pen"></i> Editar
+                            </button>
+                            <button type="button" onclick="excluirManutencao(${idx})" class="bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 px-2.5 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition">
+                                <i class="fa-solid fa-trash"></i> Excluir
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            if (tbody) tbody.innerHTML = htmlMan;
+
+            const htmlAlertas = alertas.map(txt => `
+                <div class="bg-amber-500/10 border border-amber-500/40 text-amber-300 px-4 py-3 rounded-xl text-sm flex items-center gap-2.5">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+                    <span>${txt}</span>
+                </div>
+            `).join('');
+
+            [alertasBoxMan, alertasBoxExec].forEach(box => {
+                if (!box) return;
+                if (alertas.length > 0) {
+                    box.innerHTML = htmlAlertas;
+                    box.classList.remove('hidden');
+                } else {
+                    box.innerHTML = '';
+                    box.classList.add('hidden');
+                }
+            });
+        }
+
+        function atualizarPainel() {
+            let totalRec = 0, totalDesp = 0, totalKm = 0;
+            let agrupado = {};
+            let porMotorista = {};
+
+            lancamentos.forEach((item) => {
+                totalRec += item.receita;
+                let despTot = item.despesa + (item.combustivel || 0);
+                totalDesp += despTot;
+                totalKm += item.km;
+
+                if (!agrupado[item.veiculo]) agrupado[item.veiculo] = { km: 0, receita: 0, combustivel: 0, despesa: 0, manutencao: 0 };
+                agrupado[item.veiculo].km += item.km;
+                agrupado[item.veiculo].receita += item.receita;
+                agrupado[item.veiculo].combustivel += (item.combustivel || 0);
+                agrupado[item.veiculo].despesa += item.despesa;
+
+                if (!porMotorista[item.motorista]) porMotorista[item.motorista] = { km: 0, receita: 0, combustivel: 0 };
+                porMotorista[item.motorista].km += item.km;
+                porMotorista[item.motorista].receita += item.receita;
+                porMotorista[item.motorista].combustivel += (item.combustivel || 0);
+            });
+
+            const lancOrdenados = lancamentos
+                .map((item, idx) => ({ item, idx }))
+                .sort((a, b) => (b.item.data || '').localeCompare(a.item.data || '') || b.idx - a.idx);
+
+            let htmlHistorico = '';
+            lancOrdenados.forEach(({ item, idx }) => {
+                let custoPorKm = item.km > 0 ? (item.combustivel / item.km) : 0;
+                let receitaPorKm = item.km > 0 ? (item.receita / item.km) : 0;
+
+                htmlHistorico += `
+                    <tr>
+                        <td class="p-3">${item.data || '-'}</td>
+                        <td class="p-3 font-medium">${item.motorista}</td>
+                        <td class="p-3 font-semibold text-emerald-400">${item.veiculo}</td>
+                        <td class="p-3 font-bold">${item.km.toLocaleString('pt-BR')} km</td>
+                        <td class="p-3 text-amber-500 font-bold">R$ ${item.combustivel.toFixed(2)} <span class="text-xs font-normal opacity-75">(${item.tipoCombustivel || 'GNV'})</span></td>
+                        <td class="p-3 text-rose-400 font-bold">R$ ${custoPorKm.toFixed(2)} / km</td>
+                        <td class="p-3 text-cyan-400 font-bold">R$ ${receitaPorKm.toFixed(2)} / km</td>
+                        <td class="p-3 text-right space-x-2 whitespace-nowrap">
+                            <button type="button" onclick="editarLancamento(${idx})" class="bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 px-2.5 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition">
+                                <i class="fa-solid fa-pen"></i> Editar
+                            </button>
+                            <button type="button" onclick="excluirLancamento(${idx})" class="bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 px-2.5 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition">
+                                <i class="fa-solid fa-trash"></i> Excluir
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            manutencoes.forEach(m => {
+                const valMan = parseFloat(m.valor) || 0;
+                totalDesp += valMan;
+                if (!agrupado[m.veiculo]) agrupado[m.veiculo] = { km: 0, receita: 0, combustivel: 0, despesa: 0, manutencao: 0 };
+                agrupado[m.veiculo].manutencao += valMan;
+            });
+
+            if(document.getElementById('tabela-historico')) {
+                document.getElementById('tabela-historico').innerHTML = htmlHistorico;
+            }
+
+            renderizarManutencoesEAlertas();
+
+            document.getElementById('kpi-receita').innerText = `R$ ${totalRec.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            document.getElementById('kpi-despesa').innerText = `R$ ${totalDesp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            document.getElementById('kpi-lucro').innerText = `R$ ${(totalRec - totalDesp).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            document.getElementById('kpi-km').innerText = `${totalKm.toLocaleString('pt-BR')} km`;
+
+            document.getElementById('fin-receita').innerText = `R$ ${totalRec.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            document.getElementById('fin-despesa').innerText = `R$ ${totalDesp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            document.getElementById('fin-lucro').innerText = `R$ ${(totalRec - totalDesp).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+
+            let htmlFin = '', htmlConsolidado = '';
+            for (let v in agrupado) {
+                const despTotalV = agrupado[v].combustivel + agrupado[v].despesa + agrupado[v].manutencao;
+                let lucroV = agrupado[v].receita - despTotalV;
+                let mediaCustoKm = agrupado[v].km > 0 ? (agrupado[v].combustivel / agrupado[v].km) : 0;
+                let mediaRecKm = agrupado[v].km > 0 ? (agrupado[v].receita / agrupado[v].km) : 0;
+                
+                htmlFin += `
+                    <tr>
+                        <td class="p-3 font-semibold">${v}</td>
+                        <td class="p-3 text-emerald-500 font-bold">R$ ${agrupado[v].receita.toFixed(2)}</td>
+                        <td class="p-3 text-amber-500 font-bold">R$ ${agrupado[v].combustivel.toFixed(2)}</td>
+                        <td class="p-3 text-rose-500 font-bold">R$ ${(agrupado[v].despesa + agrupado[v].manutencao).toFixed(2)}</td>
+                        <td class="p-3 font-bold">R$ ${lucroV.toFixed(2)}</td>
+                    </tr>
+                `;
+                htmlConsolidado += `
+                    <tr>
+                        <td class="p-3 font-semibold">${v}</td>
+                        <td class="p-3">${agrupado[v].km.toLocaleString('pt-BR')} km</td>
+                        <td class="p-3 text-emerald-500 font-bold">R$ ${agrupado[v].receita.toFixed(2)}</td>
+                        <td class="p-3 text-rose-500 font-bold">R$ ${despTotalV.toFixed(2)}</td>
+                        <td class="p-3 font-bold">R$ ${lucroV.toFixed(2)}</td>
+                        <td class="p-3 text-rose-400 font-bold">R$ ${mediaCustoKm.toFixed(2)} / km</td>
+                        <td class="p-3 text-cyan-400 font-bold">R$ ${mediaRecKm.toFixed(2)} / km</td>
+                    </tr>
+                `;
+            }
+            if(document.getElementById('tabela-financeiro')) document.getElementById('tabela-financeiro').innerHTML = htmlFin;
+            if(document.getElementById('tabela-consolidada')) document.getElementById('tabela-consolidada').innerHTML = htmlConsolidado;
+
+            let htmlMotDesempenho = '';
+            motoristas.forEach(m => {
+                const stats = porMotorista[m.nome] || { km: 0, receita: 0, combustivel: 0 };
+                const meta = parseFloat(m.meta) || 0;
+                let badgeMeta = '<span class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">Sem meta</span>';
+                if (meta > 0) {
+                    const pct = (stats.receita / meta) * 100;
+                    badgeMeta = pct >= 100
+                        ? `<span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold">${pct.toFixed(0)}% (Atingida)</span>`
+                        : `<span class="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 font-semibold">${pct.toFixed(0)}%</span>`;
+                }
+                htmlMotDesempenho += `
+                    <tr>
+                        <td class="p-3 font-semibold text-emerald-400">${m.nome}</td>
+                        <td class="p-3">${stats.km.toLocaleString('pt-BR')} km</td>
+                        <td class="p-3 text-emerald-500 font-bold">R$ ${stats.receita.toFixed(2)}</td>
+                        <td class="p-3 text-amber-500 font-bold">R$ ${stats.combustivel.toFixed(2)}</td>
+                        <td class="p-3">R$ ${meta.toFixed(2)}</td>
+                        <td class="p-3">${badgeMeta}</td>
+                    </tr>
+                `;
+            });
+            if (document.getElementById('tabela-desempenho-motoristas')) {
+                document.getElementById('tabela-desempenho-motoristas').innerHTML = htmlMotDesempenho;
+            }
+
+            let labelsV = [], dadosV = [], dadosKm = [];
+            for (let v in agrupado) {
+                labelsV.push(v);
+                let valRec = agrupado[v].km > 0 ? (agrupado[v].receita / agrupado[v].km) : 0;
+                dadosV.push(parseFloat(valRec.toFixed(2)));
+                dadosKm.push(agrupado[v].km);
+            }
+
+            if (chartReceitaKm) {
+                chartReceitaKm.data.labels = labelsV;
+                chartReceitaKm.data.datasets[0].data = dadosV;
+                chartReceitaKm.update();
+            }
+
+            if (chartKmVeiculo) {
+                chartKmVeiculo.data.labels = labelsV;
+                chartKmVeiculo.data.datasets[0].data = dadosKm;
+                chartKmVeiculo.update();
+            }
+        }
+
+        function exportarBackup() {
+            const payload = {
+                versao: 1,
+                exportadoEm: new Date().toISOString(),
+                veiculos: veiculosDisponiveis,
+                motoristas: motoristas,
+                lancamentos: lancamentos,
+                manutencoes: manutencoes
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mobifrota-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importarBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!Array.isArray(data.veiculos) || !Array.isArray(data.lancamentos)) {
+                        alert('Arquivo de backup inválido.');
+                        return;
+                    }
+                    if (!confirm('Isso substituirá os dados atuais deste navegador pelos dados do backup. Continuar?')) return;
+                    veiculosDisponiveis = data.veiculos;
+                    motoristas = Array.isArray(data.motoristas) ? data.motoristas : motoristas;
+                    lancamentos = data.lancamentos;
+                    manutencoes = Array.isArray(data.manutencoes) ? data.manutencoes : [];
+
+                    salvarLocal();
+                    enviarParaPlanilha();
+
+                    popularSelects();
+                    atualizarKmInicial();
+                    atualizarKmManutencao();
+                    atualizarPainel();
+                    alert('Backup restaurado e enviado para a planilha!');
+                } catch {
+                    alert('Erro ao ler o arquivo JSON.');
+                } finally {
+                    event.target.value = '';
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        async function triggerSync() {
+            const icon = document.getElementById('sync-icon');
+            if (icon) icon.classList.add('fa-spin');
+            await carregarDaPlanilha();
+            popularSelects();
+            atualizarKmInicial();
+            atualizarKmManutencao();
+            atualizarPainel();
+            if (icon) icon.classList.remove('fa-spin');
+            alert('Sincronizado com a planilha!');
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            atualizarRelogioTopo();
+            setInterval(atualizarRelogioTopo, 1000);
+            document.getElementById('l-data').valueAsDate = new Date();
+            document.getElementById('man-data').valueAsDate = new Date();
+            
+            chartReceitaKm = new Chart(document.getElementById('graficoReceitaPorKm').getContext('2d'), {
+                type: 'bar',
+                data: { labels: [], datasets: [{ label: 'R$ / km', data: [], backgroundColor: '#FFC107', borderRadius: 6 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    layout: { padding: { top: 24 } },
+                    scales: {
+                        x: { ticks: { color: '#e2e8f0' }, grid: { color: 'rgba(148, 163, 184, 0.12)' } },
+                        y: { ticks: { color: '#e2e8f0' }, grid: { color: 'rgba(148, 163, 184, 0.12)' } }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: { color: '#e2e8f0', anchor: 'end', align: 'top', formatter: (val) => `R$ ${val.toFixed(2)} / km`, font: { weight: 'bold', size: 12 } }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+
+            chartKmVeiculo = new Chart(document.getElementById('graficoKmVeiculo').getContext('2d'), {
+                type: 'bar',
+                data: { labels: [], datasets: [{ label: 'KM Rodados', data: [], backgroundColor: '#10B981', borderRadius: 6 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    layout: { padding: { top: 24 } },
+                    scales: {
+                        x: { ticks: { color: '#e2e8f0' }, grid: { color: 'rgba(148, 163, 184, 0.12)' } },
+                        y: { ticks: { color: '#e2e8f0' }, grid: { color: 'rgba(148, 163, 184, 0.12)' } }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: { color: '#e2e8f0', anchor: 'end', align: 'top', formatter: (val) => `${val.toLocaleString('pt-BR')} km`, font: { weight: 'bold', size: 12 } }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+
+            const temaSalvo = localStorage.getItem('mobi_theme') || 'dark';
+            aplicarTema(temaSalvo);
+
+            await carregarDaPlanilha();
+            popularSelects();
+            atualizarKmInicial();
+            atualizarKmManutencao();
+            atualizarPainel();
+        });
+    </script>
+</body>
+</html>
